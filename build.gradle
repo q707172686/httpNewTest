@@ -1,0 +1,91 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'kotlinx-serialization'
+    id 'maven-publish'
+}
+apply plugin: 'kotlin-android-extensions'
+
+android {
+    compileSdk 31
+
+    defaultConfig {
+        minSdk 28
+        targetSdk 31
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+task sourceJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set("sources")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId "com.sensing"
+            artifactId "httptest"
+            version "$VERSION"
+            artifact sourceJar
+            artifact "$buildDir/outputs/aar/Sensinghttp-debug.aar"
+
+            // include any transitive dependencies・・①
+            pom {
+                withXml {
+                    def dependenciesNode = asNode().appendNode('dependencies')
+
+                    project.configurations.implementation.allDependencies.each {
+                        if (it.group != null || it.name != null || it.version != null || it.name == "unspecified") return
+
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            // q707172686
+            //httpNewTest
+            url = uri("https://maven.pkg.github.com/q707172686/httpNewTest")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.token") ?: System.getenv("TOKEN")
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.4.0'
+    implementation 'com.google.android.material:material:1.4.0'
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.5'
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:1.0-M1-1.4.0-rc"
+}
